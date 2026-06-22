@@ -1,0 +1,62 @@
+{
+  "backend": "sklearn-gbr",
+  "n_candidates_total": 18745,
+  "n_skipped_malformed": [
+    18746
+  ],
+  "stage1_kept": 1000,
+  "stage2_kept": 300,
+  "top_k": 100,
+  "cv_results": [
+    {
+      "fold": 0,
+      "backend": "sklearn-gbr",
+      "ndcg@10": 0.9956017531366267,
+      "ndcg@50": 0.9978649972565732,
+      "map": 1.0,
+      "p@10": 1.0
+    },
+    {
+      "fold": 1,
+      "backend": "sklearn-gbr",
+      "ndcg@10": 1.0,
+      "ndcg@50": 1.0,
+      "map": 1.0,
+      "p@10": 0.5
+    },
+    {
+      "fold": 2,
+      "backend": "sklearn-gbr",
+      "ndcg@10": 1.0,
+      "ndcg@50": 1.0,
+      "map": 1.0,
+      "p@10": 1.0
+    },
+    {
+      "fold": 3,
+      "backend": "sklearn-gbr",
+      "ndcg@10": 0.9672380520056517,
+      "ndcg@50": 0.9930854748516857,
+      "map": 0.8813455988455987,
+      "p@10": 0.9
+    },
+    {
+      "fold": 4,
+      "backend": "sklearn-gbr",
+      "ndcg@10": 1.0,
+      "ndcg@50": 1.0,
+      "map": 1.0,
+      "p@10": 0.8
+    }
+  ],
+  "honeypot_count_in_stage2": 36,
+  "honeypot_count_in_top_k": 0,
+  "tier_distribution_stage2": {
+    "0": 36,
+    "1": 5,
+    "2": 215,
+    "3": 34,
+    "4": 10
+  },
+  "wall_clock_seconds": 18.2
+}
