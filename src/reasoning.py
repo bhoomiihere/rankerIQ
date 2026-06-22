@@ -56,6 +56,14 @@ def _behavior_clause(candidate, feat):
 
 
 def _concern_clause(candidate, feat):
+    # Iteration 2 (see experiments/exp_log.md for the self-judge pass against
+    # the spec's own Stage-4 reasoning-quality checks): low-ranked top-100
+    # candidates with thin skill overlap were getting the same flat "No
+    # material concerns" closer as a rank-1 candidate -- inconsistent with
+    # the spec's "rank consistency" check (a low-rank candidate with glowing
+    # reasoning reads as if reasoning was generated independently of rank).
+    # The experience-band and thin-skill-overlap checks below are new;
+    # honeypot/negative_reasons/title_penalty_note were already here.
     concerns = []
     if feat["honeypot_probability"] > 0:
         concerns.append(f"honeypot_probability={feat['honeypot_probability']:.2f} -- flagged, not excluded outright")
@@ -63,8 +71,14 @@ def _concern_clause(candidate, feat):
         concerns.append("; ".join(feat["negative_reasons"]))
     if feat["title_penalty_note"]:
         concerns.append(feat["title_penalty_note"])
-    if feat["experience_band_fit"] < 0.5:
-        concerns.append("experience years sit outside the JD's target band")
+    if feat["experience_band_fit"] < 0.8:
+        years = feat["years_of_experience"]
+        concerns.append(f"{years:.1f} yrs sits outside (or at the edge of) the JD's target experience band")
+    req_n = len(feat["matched_required_skills"])
+    pref_n = len(feat["matched_preferred_skills"])
+    if req_n <= 1 and pref_n <= 1:
+        concerns.append("thin skill overlap with the JD -- fit here leans on adjacent experience and "
+                         "engagement signals more than direct skill match")
     if not concerns:
         return "No material concerns flagged by our rule set."
     return "Concern: " + "; ".join(concerns) + "."

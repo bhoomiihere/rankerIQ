@@ -132,3 +132,43 @@ mentally conflated them going in.
   unstated-correction. Logged as a future improvement instead.
 - Real sentence-transformer embeddings for stage 2, blocked on the
   CPU-only / no-network constraint — see README "Future improvements."
+
+## 7. Self-judging reasoning quality against the spec's own Stage-4 rubric (hardened)
+
+`submission_spec.docx` Table 2 (Stage 4, manual review) lists six checks for
+the `reasoning` column: specific facts, JD connection, honest concerns,
+no hallucination, variation across the sampled rows, and rank consistency
+("a rank-95 candidate with glowing reasoning ... indicates the reasoning was
+generated independently of the ranking"). Sampled 10 rows from
+`submission.csv` (ranks 1,2,3,10,25,50,51,75,90,100) and checked each
+against all six by hand instead of assuming `src/reasoning.py` already
+satisfied them.
+
+Five of six held up. Rank consistency and honest concerns did not: ranks 50,
+51, 75, 90, and 100 all closed with the identical "No material concerns
+flagged by our rule set." despite falling well down the top 100 -- exactly
+the failure mode the spec calls out, and a sign the prose wasn't actually
+reflecting why a candidate was ranked where they were. Rank 100
+(`CAND_0011547`, 1 matched required skill, 1 matched preferred skill) read
+no differently in tone from rank 1, even though the spec's own example
+submission CSV frames a rank-100 filler candidate explicitly ("Adjacent
+skills only -- likely below cutoff but included as final filler...").
+
+Pulled the actual numbers behind this before changing anything: checked
+`experience_band_fit` against the real job band (5-9 years, soft curve, not
+[6,8] as we'd assumed from the JD prose) -- rank 1's candidate at 4.4 years
+scores 0.88 fit, genuinely not a concern, so the experience-band threshold
+wasn't the gap. The real gap was skill-overlap depth: 20/100 final
+candidates have <=1 matched required skill *and* <=1 matched preferred
+skill, and none of them had that surfaced in their reasoning text.
+
+Added two checks to `_concern_clause` in `src/reasoning.py`: experience-band
+threshold tightened from `< 0.5` to `< 0.8` (still didn't fire for rank 1,
+correctly), and a new thin-skill-overlap check (`req_n <= 1 and pref_n <=
+1`) that now fires for exactly those 20 candidates. Deliberately did not
+lower the bar to `<= 2` (47/100 candidates) -- that would dilute the "no
+concerns" signal for genuinely reasonable matches just to look thorough.
+Regenerated `submission.csv`; re-ran `validate_submission.py` (still valid,
+100 rows, ranks unique, scores non-increasing). Scores and ranks are
+unchanged -- this only changes the `reasoning` text, not the ranking
+pipeline, so `metrics_report.md`'s numbers are unaffected.
