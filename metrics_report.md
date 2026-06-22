@@ -86,10 +86,31 @@ tier 0. All 36 stage-2 honeypots would reach the top 100 unfiltered, versus
 0 with detection on. Every other ablation in this table is a matter of
 degree; this one is a cliff.
 
-**Category-weighted skill scoring beats flat weighting, but the gap is
-smaller than we expected going in** (NDCG@10 0.968 ensemble / 0.818 rule-only
-vs. 0.868 flat — flat weighting is worse but not catastrophic). The
-`decoy_title_check` (best rule-only rank achieved by any candidate whose
+**Flat skill weighting actually scores slightly *higher* against our own
+pseudo-labels than category weighting** (NDCG@10 0.868 flat vs. 0.818
+category-weighted rule-only; MAP 0.667 vs. 0.646). We expected category
+weighting to win this comparison going in — it's the opposite of what we
+expected, and we're reporting it rather than rewriting the ablation until it
+agrees with us. The honest explanation, after checking: `assign_tier` only
+produces 5 coarse buckets, and 215 of the 300 stage-2 survivors land in the
+same tier (tier 2). NDCG against a target with that many ties is sensitive
+to *which* same-tier candidates a scoring scheme happens to push slightly
+higher, not to whether the scheme reflects the JD's intent — and category
+weighting's whole benefit (suppressing JD-buzzword decoys) is a benefit
+against decoys that mostly never reach the stage-2 pool to begin with, or
+get caught by title-tier gating and honeypot detection regardless of skill
+weighting. So this particular ablation doesn't actually demonstrate the
+benefit we built category weighting for. The qualitative case for it still
+stands — our very first baseline (plain keyword overlap, no category
+weights, see `experiments/exp_log.md` §2) put a Mechanical Engineer with 6
+stuffed skill tags in the top 10 on a manual spot-check, which category
+weighting fixes — but that's a different, qualitative check, not this NDCG
+number. We're keeping category weighting in the pipeline because of the
+manual spot-check evidence and because it's a more defensible model of "what
+should count as a skill match" on its own terms, not because this ablation
+table proves it wins.
+
+The `decoy_title_check` (best rule-only rank achieved by any candidate whose
 title sits outside the JD's tier_3/4/5 list) came back identical under both
 weighting schemes — rank 3, in both cases the same candidate,
 `CAND_0008618` ("Computer Vision Engineer"). We checked this by hand rather
@@ -113,27 +134,4 @@ gives `title_score` only a 0.35 sub-weight inside the 0.15-weighted
 `experience_fit` term (~5% of the total), a near-zero title score cannot by
 itself suppress a candidate who also scores well on `semantic` (0.30
 weight) and `retrieval_skill_match` (0.20 weight) — those two terms are
-exactly half the composite and aren't gated by title. The learned reranker
-doesn't inherit this limitation, because the pseudo-labels it trains on
-gate tier assignment on `title_score` directly (`assign_tier` requires
-`title >= 0.45` for tier 3, `title >= 0.75` for tier 4 — see
-`src/pseudo_labels.py`). This is the concrete reason the final submission
-uses the 50/50 rule+model ensemble rather than the rule score alone: the
-rule score is the auditable backbone, but it has a known blind spot the
-model corrects for on cases like this one.
-
-## Calibration honesty
-
-- `lightgbm` was not importable in our dev sandbox (network-restricted,
-  could not install it reliably during build). Every number in this report
-  was produced by the `sklearn.ensemble.GradientBoostingRegressor` fallback
-  path in `src/train_ranker.py`, not LightGBM/LambdaMART. The code tries
-  LightGBM first and logs which backend actually ran (`backend` field in
-  `metrics_report_data.json` — currently `"sklearn-gbr"`). We did not bench
-  LightGBM ourselves before submitting.
-- All scores in `submission.csv` are an ensemble of an explainable rule
-  score and a GBT trained on our own heuristic labels. Treat the absolute
-  score values as a ranking signal, not a calibrated probability of
-  anything — nothing in this pipeline was calibrated against an external
-  outcome (e.g., "this candidate gets hired"), because no such label
-  exists in the released data.
+exact
