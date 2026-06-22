@@ -1,0 +1,87 @@
+{
+  "_comment": "Built by hand from job_description.docx. Weights are our judgment call, justified in challenge_analysis.md, not learned -- there's no ground truth to fit them against before submission. We treat this file as the single place that encodes 'what the JD means', so the scoring code in src/features.py never re-derives JD logic; rerun phase4_job_repr.py and review the diff if the JD wording changes.",
+
+  "role": "Senior AI Engineer - Founding Team, Redrob AI",
+  "experience_band": {"min_years": 5, "max_years": 9, "hard_filter": false,
+    "note": "JD explicitly says this is a guideline, not a cutoff: 'we'll seriously consider candidates outside the band if other signals are strong'. Used as a soft scoring curve, not a filter."},
+
+  "required_skills": {
+    "_weight_each": 1.0,
+    "embeddings_retrieval": ["Embeddings", "Sentence Transformers", "Vector Search", "Semantic Search",
+      "RAG", "BGE", "E5", "OpenAI Embeddings", "Dense Retrieval", "Hybrid Search"],
+    "vector_db_infra": ["Pinecone", "Weaviate", "Qdrant", "Milvus", "OpenSearch", "Elasticsearch", "FAISS", "pgvector"],
+    "python": ["Python"],
+    "evaluation": ["NDCG", "MAP", "MRR", "Offline Evaluation", "A/B Testing", "Evaluation Frameworks"]
+  },
+
+  "preferred_skills": {
+    "_weight_each": 0.5,
+    "fine_tuning": ["Fine-tuning LLMs", "LoRA", "QLoRA", "PEFT"],
+    "learning_to_rank": ["Learning to Rank", "LambdaMART", "XGBoost", "Ranking Systems", "BM25"],
+    "open_source": ["Open Source Contributions"]
+  },
+
+  "preferred_industry_exposure": ["HRTech", "Recruiting Tech", "Marketplace", "Fintech", "E-commerce", "Food Delivery"],
+
+  "title_tiers": {
+    "_comment": "Tier 5 = near-exact title match. We score by tier, not by string equality, because the JD itself argues against keyword title matching (the Backend-Engineer-with-Kaggle-side-projects case in our sample data is exactly the kind of candidate a pure title filter would miss).",
+    "tier_5_exact": ["Senior AI Engineer", "AI Engineer", "Senior Machine Learning Engineer", "Machine Learning Engineer",
+      "Senior NLP Engineer", "NLP Engineer", "Search Engineer", "Recommendation Systems Engineer", "Applied ML Engineer"],
+    "tier_4_close": ["ML Engineer", "Senior Software Engineer (ML)", "AI Specialist", "Senior Data Scientist", "Data Scientist"],
+    "tier_3_adjacent": ["Senior Software Engineer", "Backend Engineer", "Senior Data Engineer", "Data Engineer", "Analytics Engineer", "Software Engineer"],
+    "tier_2_weak_adjacent": ["Cloud Engineer", "DevOps Engineer", "Full Stack Developer", "Data Analyst"],
+    "tier_1_unrelated": ["Mechanical Engineer", "HR Manager", "Business Analyst", "Content Writer", "Accountant",
+      "Sales Executive", "Customer Support", "Civil Engineer", "Graphic Designer", "Project Manager",
+      "Operations Manager", "Marketing Manager", "Mobile Developer", "Frontend Engineer", "QA Engineer",
+      "Java Developer", ".NET Developer"],
+    "penalized_titles": {
+      "_comment": "JD explicitly disqualifies these unless paired with strong counter-evidence in career_history.",
+      "AI Research Engineer": "pure-research signal in title; JD disqualifies academic/research-only without production deployment",
+      "Junior ML Engineer": "JD targets 5-9 yrs senior band; junior title is a strong band mismatch, not disqualifying alone",
+      "Computer Vision Engineer": "JD explicitly deprioritizes CV/speech/robotics without NLP/IR exposure"
+    }
+  },
+
+  "negative_signals": {
+    "service_only_career": {
+      "companies": ["TCS", "Wipro", "Infosys", "Accenture", "Cognizant", "Capgemini", "HCL", "Mphasis"],
+      "penalty_if_entire_history": 0.35,
+      "note": "JD: fine if currently at one of these but has prior product-company experience -- penalty only applies when 100% of career_history is at these firms."
+    },
+    "framework_only": {
+      "skills": ["LangChain"],
+      "rule": "penalize if LangChain appears and recent (<=12mo experience implied) AND no pre-LLM-era production ML evidence (no embeddings/retrieval/ranking skill with duration_months > 24)",
+      "penalty": 0.25
+    },
+    "cv_speech_without_nlp_ir": {
+      "rule": "title or skills dominated by Computer Vision / Speech / Robotics with no Information Retrieval, Embeddings, Ranking, or NLP skill present",
+      "penalty": 0.3
+    },
+    "title_chaser": {
+      "rule": "3+ employers in career_history with average tenure < 18 months and escalating seniority words in title",
+      "penalty": 0.15
+    }
+  },
+
+  "location_preference": {
+    "preferred": ["Pune", "Noida", "Hyderabad", "Mumbai", "Delhi", "Delhi NCR", "Gurgaon", "Gurugram", "Bangalore", "Bengaluru"],
+    "country_required_soft": "India",
+    "note": "JD: 'Outside India: case-by-case, but we don't sponsor work visas.' Treated as a moderate scoring penalty, not a hard filter -- a strong non-India candidate with willing_to_relocate=true should not be zeroed out."
+  },
+
+  "notice_period_curve": {
+    "<=30": 1.0, "31-60": 0.8, "61-90": 0.55, "91-180": 0.35,
+    "note": "JD: 'we'd love sub-30-day notice... 30+ day notice candidates are still in scope but the bar gets higher.'"
+  },
+
+  "composite_weights": {
+    "semantic": 0.30,
+    "retrieval_skill_match": 0.20,
+    "experience_fit": 0.15,
+    "behavior": 0.10,
+    "evaluation_fit": 0.10,
+    "trust": 0.10,
+    "availability": 0.05,
+    "_comment": "Matches the formula specified in the challenge brief. See metrics_report.md section 'weight ablation' for what happens if these are changed -- semantic and retrieval_skill_match dominate, which is appropriate for a JD this specific about required skills."
+  }
+}
