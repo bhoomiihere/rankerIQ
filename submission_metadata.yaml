@@ -1,0 +1,68 @@
+# Redrob Hackathon -- Submission Metadata
+# Filled in from docs/submission_metadata_template.yaml
+
+team_name: "Bk"
+
+primary_contact:
+  name: "Meghna Kaushik"
+  email: "mkgapbvk@gmail.com"
+  phone: "+91-XXXXXXXXXX"  # TODO: fill in before submitting
+
+team_members:
+  - name: "Bhoomi Kaushik"
+    email: "mkgapbvk@gmail.com"  # TODO: confirm/replace with Bhoomi's own email if different
+    role: "ML Engineer"
+
+github_repo: "https://github.com/YOUR_USERNAME/YOUR_REPO"  # TODO: push this repo and fill in
+sandbox_link: "https://huggingface.co/spaces/YOUR_USERNAME/redrob-ranker"  # TODO: see README "Deploying the sandbox"
+
+reproduce_command: "python rank.py --candidates candidates.jsonl --out submission.csv"
+
+compute:
+  platform: "Local Linux sandbox (dev) / TODO fill in actual submission machine"
+  cpu_cores: 2
+  ram_gb: 4
+  python_version: "3.10.12"
+  os: "Ubuntu 22.04 LTS"
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
+  pre_computation_required: false
+  pre_computation_time_minutes: 0
+
+ai_tools_used:
+  - "Claude"
+
+ai_usage_summary: |
+  Used Claude (Anthropic) throughout development: for reverse-engineering the
+  JD's hidden scoring logic against the released dataset (frequency counts,
+  honeypot signal verification), for writing and iterating on the feature
+  engineering / honeypot detection / retrieval code, and for drafting
+  documentation. No candidate data was sent to any third-party LLM API at
+  ranking time -- rank.py makes zero network calls, which we verified by
+  running it with network access disabled (see metrics_report.md, "compute
+  constraints" section).
+
+methodology_summary: |
+  Four-stage funnel (BM25 -> TF-IDF/SVD dense similarity -> rule-based feature
+  scoring -> learned reranker) over 18,745 candidates against one JD. The
+  central finding driving the design: the JD's own named required skills
+  (Pinecone, RAG, FAISS, embeddings) are scattered near-uniformly across
+  irrelevant titles in the dataset (the "anti-keyword trap"), while rarer
+  skills (BM25, Learning to Rank, Elasticsearch-family vector DBs) are
+  concentrated almost entirely in genuine ML-titled candidates. We weight
+  skills by category and by claim-strength (duration/endorsements/assessment
+  score), not raw presence, and run an independent rule-based honeypot
+  detector (impossible employment dates, "expert"-tier proficiency claims,
+  duration mismatches) whose penalty is multiplicative and separate from
+  semantic similarity -- our top candidate by pure cosine similarity is in
+  fact a honeypot, which is why that separation matters. Final score blends
+  the transparent rule-based composite with a GBT reranker (LightGBM
+  LambdaMART when available; sklearn GradientBoostingRegressor fallback)
+  trained on heuristic pseudo-labels. ~18s end-to-end on 2 CPU cores.
+
+declarations:
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true
+  reproduction_tested: true
