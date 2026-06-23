@@ -1,6 +1,8 @@
 # Core data handling
 pandas==2.3.3
-numpy==2.2.6
+numpy>=2.2  # unpinned from 2.2.6 -- that exact build has no Python 3.14 wheel
+            # on Windows and was forcing a from-source build that needs a
+            # newer GCC than this machine has. Any 2.2+ wheel works fine here.
 
 # Stage 1 retrieval (sparse/BM25)
 rank-bm25==0.2.2
@@ -11,9 +13,4 @@ scikit-learn==1.7.2
 # Primary reranker backend (LambdaMART). If pip can't reach this on a given
 # sandbox, src/train_ranker.py falls back to sklearn's GradientBoostingRegressor
 # automatically -- see that file's module docstring for why. We're pinning a
-# version known to work with the lambdarank objective on CPU.
-lightgbm==4.3.0
-
-# Word document parsing for docs/job_description.txt regeneration (optional,
-# only needed if you re-run scripts/extract_job_description.py against a new JD)
-python-docx==1.1.0
+# version known to work with the lamb
