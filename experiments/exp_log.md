@@ -199,3 +199,40 @@ reconstruction matches what was actually running before the corruption.
 Re-validated with `validate_submission.py`. Flagging this here rather than
 quietly re-committing, since "the file was broken and we didn't notice"
 is exactly the kind of thing that should be visible in the log, not erased.
+
+## 9. lightgbm 4.3.0 imports fine but crashes at fit time under numpy>=2.0
+
+Second issue found running the real one-command repro on a clean Windows
+machine (after fixing #8): `rank.py` got past feature scoring into stage 4
+and crashed inside `lgb.LGBMRanker.fit()` with `ValueError: Unable to avoid
+copy while creating an array as requested`. Reproduced the exact same crash
+in our own sandbox by installing `lightgbm==4.3.0` alongside `numpy==2.2.6`
+(this sandbox didn't have lightgbm installed before, so we'd never actually
+exercised the "lightgbm present" code path end-to-end until now).
+
+Root cause: lightgbm's internal `_list_to_1d_numpy` calls `np.array(data,
+dtype=dtype, copy=False)` to build the LambdaMART `group` array. NumPy 2.0
+changed `copy=False` from "copy only if a copy is needed" to "never copy,
+raise if one is required" -- a documented breaking change, not a bug on
+our end, but lightgbm 4.3.0's own code wasn't updated for it on this
+particular array-construction path.
+
+The existing fallback in `src/train_ranker.py` only caught `ImportError` at
+import time -- it assumed "lightgbm available" and "lightgbm works" were
+the same thing, which this case shows isn't true. Widened `train_model` to
+wrap the actual `model.fit()` call in a try/except and fall back to
+sklearn's `GradientBoostingRegressor` on *any* failure there, not just a
+missing import, logging which branch ran either way. Verified the fix
+catches the real reproduced exception (confirmed via a standalone script
+before touching `rank.py`) and that the full pipeline now runs end-to-end
+under `lightgbm==4.3.0` + `numpy==2.2.6` together, producing a
+`submission.csv` whose 100 ranks are identical to the previous run (same
+sklearn-gbr backend, same result -- this is a robustness fix, not a
+scoring change).
+
+Considered pinning `numpy<2.0` instead, but rejected it: there's no
+Python-3.14 wheel for numpy 1.x, so it would have re-broken installation
+(see #8), and it wouldn't actually fix lightgbm's own incompatibility --
+it would just avoid triggering it on this one machine while leaving the
+real fragility (lightgbm assuming old numpy copy semantics) unaddressed
+for whoever's numpy resolves differently next.

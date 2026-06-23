@@ -16,6 +16,19 @@ LightGBM is available, it's used; the code logs which path actually ran so
 metrics_report.md's numbers are traceable to a specific model, not a
 guess.
 
+Update: the fallback originally only triggered on ImportError (lightgbm not
+installed at all). Reproducing on a clean Windows/Python 3.14 machine
+surfaced a second failure mode in the same risk category -- lightgbm==4.3.0
+imports fine but crashes inside model.fit() under numpy>=2.0, because its
+internal `_list_to_1d_numpy` calls `np.array(data, dtype=dtype,
+copy=False)`, and numpy 2.0 changed `copy=False` from "copy only if
+needed" to "never copy, raise if a copy is required." That's exactly the
+"pip install succeeds but the library doesn't actually work here" case this
+fallback exists for, so we widened the try/except to cover a failed fit,
+not just a failed import, instead of pinning numpy<2.0 (which has no
+Python 3.14 wheel and isn't a real fix for the underlying lightgbm/numpy
+incompatibility anyway).
+
 This is a single-query ranking problem (one JD, ~18.7K candidates) -- there
 is no cross-query structure to learn from, unlike typical LTR benchmarks
 (MSLR-WEB30K, Yahoo LTR) with thousands of queries. LambdaMART's group
@@ -49,25 +62,34 @@ def _try_import_lightgbm():
         return None
 
 
+def _fit_sklearn_gbr(X, y, random_state):
+    model = GradientBoostingRegressor(
+        n_estimators=200, max_depth=3, learning_rate=0.05,
+        subsample=0.8, random_state=random_state,
+    )
+    model.fit(X, y)
+    return model, "sklearn-gbr"
+
+
 def train_model(X, y, random_state=42):
     lgb = _try_import_lightgbm()
-    if lgb is not None:
+    if lgb is None:
+        logger.warning("lightgbm not importable -- falling back to sklearn GradientBoostingRegressor. "
+                        "See src/train_ranker.py module docstring for why this fallback exists.")
+        return _fit_sklearn_gbr(X, y, random_state)
+
+    try:
         model = lgb.LGBMRanker(
             objective="lambdarank", n_estimators=200, num_leaves=15,
             learning_rate=0.05, min_child_samples=10, random_state=random_state,
         )
         model.fit(X, y, group=[len(y)])
-        backend = "lightgbm-lambdamart"
-    else:
-        logger.warning("lightgbm not importable -- falling back to sklearn GradientBoostingRegressor. "
-                        "See src/train_ranker.py module docstring for why this fallback exists.")
-        model = GradientBoostingRegressor(
-            n_estimators=200, max_depth=3, learning_rate=0.05,
-            subsample=0.8, random_state=random_state,
-        )
-        model.fit(X, y)
-        backend = "sklearn-gbr"
-    return model, backend
+        return model, "lightgbm-lambdamart"
+    except Exception as exc:
+        logger.warning("lightgbm imported but failed at fit time (%r) -- falling back to sklearn "
+                        "GradientBoostingRegressor. Known cause: lightgbm<4.4 + numpy>=2.0 group-array "
+                        "construction. See src/train_ranker.py module docstring.", exc)
+        return _fit_sklearn_gbr(X, y, random_state)
 
 
 def cross_validate(feature_df, labels, n_splits=5, random_state=42):
