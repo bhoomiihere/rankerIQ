@@ -374,4 +374,14 @@ def rule_based_composite(feat, job_repr):
 
     Honeypot handling: rather than zeroing honeypots outright (which would
     make their rank arbitrary and let ties decide it, including possibly
-    near the top by accident), we apply a steep penalty that g
+    near the top by accident), we apply a steep multiplicative penalty
+    instead -- additive honeypot scoring was tried first and rejected (see
+    exp_log.md #3: a strong honeypot with strong supporting text elsewhere
+    still placed 4th under an additive term). honeypot_penalty hits 0 once
+    probability crosses 0.625, steep enough that nothing flagged that
+    strongly survives into the top 100.
+    """
+    weights = job_repr["composite_weights"]
+    base = sum(weights[k] * feat[k] for k in weights if not k.startswith("_"))
+    honeypot_penalty = max(0.0, 1 - 1.6 * feat["honeypot_probability"])
+    return float(base * feat["negative_multiplier"] * honeypot_penalty)

@@ -172,3 +172,30 @@ Regenerated `submission.csv`; re-ran `validate_submission.py` (still valid,
 100 rows, ranks unique, scores non-increasing). Scores and ranks are
 unchanged -- this only changes the `reasoning` text, not the ranking
 pipeline, so `metrics_report.md`'s numbers are unaffected.
+
+## 8. Caught a real corrupted file before final upload (src/features.py)
+
+Running `rank.py` fresh on a clean machine (Windows, Python 3.14, after
+fixing the numpy wheel pin -- see requirements.txt) hit a `SyntaxError:
+unterminated triple-quoted string literal` in `rule_based_composite`. The
+function's docstring and entire body were missing -- cut off mid-sentence
+at "we apply a steep penalty that g". This had been silently broken in the
+repo (same truncation signature seen earlier in this build on this sandbox's
+mount, see the `reasoning.py` and `build_ppt.py` incidents) without anyone
+re-running the full pipeline against the affected copy after it happened, so
+`submission.csv` in the repo was actually stale relative to the broken
+source -- it still reflected an earlier, intact version of the function.
+
+Reconstructed the function from what's independently documented elsewhere:
+`composite_weights` in `weighted_job_representation.json` (semantic 0.30,
+retrieval_skill_match 0.20, experience_fit 0.15, behavior 0.10,
+evaluation_fit 0.10, trust 0.10, availability 0.05 -- sums to 1.0) for the
+weighted sum, and the multiplicative honeypot penalty formula recorded in
+this log's entry #3 (`max(0, 1 - 1.6*probability)`), plus `negative_
+multiplier` from `negative_signal_multiplier`. Re-ran `rank.py` end to end
+and diffed the new `submission.csv` against the stale-but-good one still in
+the repo: all 100 candidate_ids land on the exact same rank, confirming the
+reconstruction matches what was actually running before the corruption.
+Re-validated with `validate_submission.py`. Flagging this here rather than
+quietly re-committing, since "the file was broken and we didn't notice"
+is exactly the kind of thing that should be visible in the log, not erased.
