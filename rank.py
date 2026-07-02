@@ -128,8 +128,15 @@ def main():
     feature_df["final_score"] = 0.5 * feature_df["rule_score"] + 0.5 * feature_df["model_score"]
     logger.info("stage 4 (rerank, backend=%s): trained + scored in %.1fs", backend, time.time() - t0)
 
+    # BUG FIX: sorting on the full-precision final_score but writing a 6-decimal
+    # rounded score to the CSV meant two rows that were merely *close* (not exactly
+    # tied) pre-rounding could land adjacent with the wrong candidate_id order once
+    # rounded -- validate_submission.py caught this ("Equal scores at ranks 61/62,
+    # tie-break requires candidate_id ascending"). Round first, then sort on the
+    # rounded value, so the tie-break is applied at the same precision we output.
+    feature_df["final_score_rounded"] = feature_df["final_score"].round(6)
     ranked = feature_df.sort_values(
-        ["final_score", "candidate_id"], ascending=[False, True]
+        ["final_score_rounded", "candidate_id"], ascending=[False, True]
     ).head(args.top_k).reset_index(drop=True)
 
     # Tie-break and monotonicity: validator requires score non-increasing by rank and,
