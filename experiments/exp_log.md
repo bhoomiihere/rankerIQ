@@ -236,3 +236,46 @@ Python-3.14 wheel for numpy 1.x, so it would have re-broken installation
 it would just avoid triggering it on this one machine while leaving the
 real fragility (lightgbm assuming old numpy copy semantics) unaddressed
 for whoever's numpy resolves differently next.
+
+## 10. Discovered the real candidates.jsonl is 100,000 rows, not 18,745 -- re-ran everything (2026-07-02)
+
+Every number in this log through #9, and everything in `metrics_report.md`
+/ `challenge_analysis.md` / `defense_notes.md` as originally written, was
+computed against an 18,745-row `candidates.jsonl` that we now know was a
+truncated dev-time download -- we didn't have the real file at build time.
+The actual organizer release (`[PUB] India_runs_data_and_ai_challenge.zip`)
+contains a 100,000-row `candidates.jsonl`, which the JD text itself
+confirms is the intended scale ("we're not expecting to find many matches
+in a 100K candidate pool" -- we'd read that line before and filed it under
+"rhetorical," not literal).
+
+Also found and fixed a real bug before re-running: `rank.py` sorted the
+final ranking on full-precision `final_score` but wrote a 6-decimal
+*rounded* score to the CSV, so two rows that were close-but-not-exactly-tied
+pre-rounding could round together with `candidate_id` in the wrong tie-break
+order. `validate_submission.py` caught this on a test run against sample
+data ("Equal scores at ranks 61 and 62, tie-break requires candidate_id
+ascending"). Fixed by rounding before sorting, not after.
+
+Re-ran `rank.py` and `scripts/ablation_study.py` against the real 100,000-row
+file: 56.7s wall clock (vs. 18.2s at the old 18,745-row scale -- still ~5x
+under the 5-minute budget), 0 malformed lines (vs. 1 at the old scale),
+`validate_submission.py` passes. Most proportions held up at the new scale
+(bait-tier skill prevalence ~5%, signal-tier ~1.3% each, same candidate
+`CAND_0008618` is still the clearest decoy-title case, the top-by-semantic-
+similarity candidate is still independently a honeypot). One thing did NOT
+hold up, and we're logging it rather than quietly patching it: our honeypot
+detector's three signals, run against the real file, flag 410 candidates
+(200 expert-proficiency + 175 founding-year-violation + 35
+duration-mismatch, **zero overlap between them**), against the spec's
+stated "~80" for the honeypot count. The spec's own worked example combines
+multiple red flags in one profile; our real-scale result finding zero
+candidates with more than one signal, plus a median founding-year severity
+of just 1 year (vs. the spec's 3-year example), points to the founding-year
+rule partly firing on generator noise across the wider release rather than
+exclusively on designed honeypots. We did not retune the threshold to force
+the count back toward ~80 -- that would be fitting to a number we were told
+rather than to evidence in the data. What we verified instead: our actual
+top 100 has 0 flagged honeypots either way, so this is a diagnostic-accuracy
+gap in our own reporting, not a submission-correctness problem. Listed as an
+open item in `defense_notes.md` §5.

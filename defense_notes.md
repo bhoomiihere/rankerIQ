@@ -12,20 +12,24 @@ stated plainly rather than assumed.
 
 - `submission.csv` — 100 rows + header, ranks 1-100 unique, scores
   non-increasing, every `candidate_id` real — `python validate_submission.py
-  submission.csv` passes.
+  submission.csv` passes, re-verified against the real 100,000-row
+  `candidates.jsonl` on 2026-07-02 (earlier runs used a truncated
+  18,745-row dev copy; see `experiments/exp_log.md`).
 - `rank.py --candidates candidates.jsonl --out submission.csv` — single
-  command, 18.2s wall clock on 2 CPU cores / 4GB RAM (budget: 5 min / 16GB),
-  zero network calls, no GPU.
+  command, 56.7s wall clock on 2 CPU cores / 4GB RAM against the real
+  100,000-row file (budget: 5 min / 16GB), zero network calls, no GPU.
 - `README.md`, `requirements.txt`, `Dockerfile`, `submission_metadata.yaml`
   (mostly filled — see blockers below), `metrics_report.md`,
   `experiments/exp_log.md`, `tests/test_metrics.py`.
-- Git history: 19 commits with real, individually-justified design
-  decisions and three documented self-corrections (ablation interpretation,
-  CV-without-NLP/IR rule hardening, reasoning rank-consistency gap) — not a
-  single dump.
+- Git history: 26+ commits with real, individually-justified design
+  decisions and multiple documented self-corrections (ablation
+  interpretation, CV-without-NLP/IR rule hardening, reasoning
+  rank-consistency gap, tie-break rounding bug, full-scale data re-run) —
+  not a single dump.
 - `Bk_Redrob_Submission.pptx` — built into the actual organizer template
   (`Idea Submission Template _ Redrob.pptx`), all 11 slides filled,
-  rendered and visually checked slide-by-slide.
+  rendered and visually checked slide-by-slide. Not yet re-checked against
+  the corrected 100K-scale numbers — see blockers below.
 
 **Blocking — needs Meghna, can't be filled by the pipeline:**
 
@@ -33,12 +37,15 @@ stated plainly rather than assumed.
   confirmation of Bhoomi's actual email if it differs from
   `mkgapbvk@gmail.com`, the real `compute.platform` line for whichever
   machine actually produces the final submission run.
-- `github_repo` — this repo needs to be pushed to GitHub and the URL filled
-  in (`submission_metadata.yaml` + PPT slide 9). Per the original
-  instruction, this build does not push on your behalf.
+- `github_repo` — now known and pushed: `https://github.com/bhoomiihere/rankerIQ`.
+  Still needs to be confirmed in `submission_metadata.yaml` + PPT slide 9
+  once the latest commits (bugfix + real-data re-run + doc corrections) are
+  pushed.
 - `sandbox_link` — **mandatory**, flagged at Stage 1 if missing. README has
   a "Deploying the sandbox link" section with the Streamlit/HF Spaces
-  options; none is deployed yet. This is the single biggest open item.
+  options; none is deployed yet. This is still the single biggest open item.
+- `Bk_Redrob_Submission.pptx` — built against the old 18,745-row numbers;
+  needs a pass to match the corrected 100,000-row figures before upload.
 - Three-submission cap: this would be submission attempt #1 if uploaded
   now. No submissions have actually been made.
 
@@ -55,14 +62,17 @@ and the live run is clean.
 that it matches Redrob's real labels (this caveat is the first thing
 `metrics_report.md` says, on purpose).
 
-**Stage 3 — Code reproduction + honeypot check.** Pass, self-verified.
-18.2s / 2 cores / well under 16GB, zero network calls (verified with network
-disabled), 0 honeypots in the final top 100 against a >10%-disqualifies
-threshold (36 honeypots were in the stage-2 pool of 300 — all filtered).
-`Dockerfile` exists and should be tested with `docker build && docker run`
-on a clean machine before the real submission, which we have not done in
-this sandbox (no Docker daemon available here — flagged honestly, not
-silently skipped).
+**Stage 3 — Code reproduction + honeypot check.** Pass, self-verified
+against the real 100,000-row `candidates.jsonl`. 56.7s / 2 cores / well
+under 16GB, zero network calls (verified with network disabled), 0
+honeypots in the final top 100 against a >10%-disqualifies threshold (179
+honeypots were in the stage-2 pool of 300 — all filtered; see the
+"Honeypots" section of `challenge_analysis.md` for why this count is much
+higher than the spec's approximate ~80 figure and what we think is causing
+that, reported honestly rather than tuned away). `Dockerfile` exists and
+should be tested with `docker build && docker run` on a clean machine
+before the real submission, which we have not done in this sandbox (no
+Docker daemon available here — flagged honestly, not silently skipped).
 
 **Stage 4 — Manual review.** Self-judged directly against the spec's own
 six reasoning-quality checks (Table 2), see Section 3 below — this is
@@ -108,13 +118,14 @@ step is making check #6 explicit for the 50-89 band too — see Section 5.
 
 ## 4. Anticipated defense-interview questions (Stage 5) and grounded answers
 
-**"Walk me through what happens when I run `rank.py`."** BM25 cuts 18,745
-to 1,000 in ~9s; TF-IDF+SVD (fit once on the full corpus, not just
+**"Walk me through what happens when I run `rank.py`."** BM25 cuts 100,000
+to 1,000 in ~31s; TF-IDF+SVD (fit once on the full corpus, not just
 survivors — see `exp_log.md` §4 for why we changed this) cuts 1,000 to 300
-in ~7s; the 300 get full feature scoring plus honeypot detection; a 5-fold
+in ~22s; the 300 get full feature scoring plus honeypot detection; a 5-fold
 CV diagnostic runs, then a GBT reranker trains on heuristic pseudo-labels
 and produces `final_score = 0.5*rule_score + 0.5*model_score` for the
-ensemble. Total ~18s.
+ensemble. Total ~57s against the real dataset, well under the 5-minute
+budget.
 
 **"Why two scores blended instead of just the better one?"** The rule
 score is fully auditable (every number traces to a brief-literal formula)
@@ -122,29 +133,43 @@ but has a real, documented blind spot: `title_score` only enters through a
 0.35 sub-weight inside the 0.15-weighted `experience_fit` term (~5% of the
 total), so a near-zero title score can't suppress a candidate who also
 scores well on `semantic` + `retrieval_skill_match` (50% of the composite,
-untouched by title). We found this via `CAND_0008618` (rule-only rank 3,
-model-only rank 43, ensemble rank 39) — see `exp_log.md` §5. The learned
+untouched by title). We found this via `CAND_0008618` (rule-only rank 5,
+model-only rank 84, ensemble rank 46) — see `exp_log.md` §5. The learned
 model fixes this because its training labels gate on title directly. We
 kept the rule score in the blend anyway because it's the part we can fully
 explain without "the model learned it" as the answer.
 
 **"Your ablation says flat skill weighting beats category weighting —
-doesn't that undercut your whole skills taxonomy?"** No, and we say why in
-`metrics_report.md` directly rather than hiding the number: the pseudo-
-label target has only 5 tiers and 215/300 survivors land in one tier, so
-NDCG against it is sensitive to within-tier noise, not to whether a
-weighting scheme reflects the JD's intent. The actual case for category
-weighting is qualitative — our first baseline (plain keyword overlap) put
-a Mechanical Engineer with 6 stuffed skill tags in the top 10 on a manual
-spot-check; category weighting is what fixes that, not this NDCG table.
+doesn't that undercut your whole skills taxonomy?"** It's genuinely mixed
+at full 100K scale, not a clean loss — category weighting actually wins
+NDCG@10 (0.828 vs 0.822), flat wins NDCG@50 and MAP. We say why in
+`metrics_report.md` directly rather than hiding the split: the pseudo-label
+target is now dominated by tier 0 (179/300 — see the honeypot question
+below), and skill weighting doesn't touch honeypot filtering at all, so the
+NDCG/MAP gap is decided by a smaller, noisier remainder (the 121 non-tier-0
+survivors). The actual case for category weighting is qualitative — our
+first baseline (plain keyword overlap) put a Mechanical Engineer with 6
+stuffed skill tags in the top 10 on a manual spot-check; category weighting
+is what fixes that, not this NDCG table.
 
 **"How do you know your honeypot detector isn't just overfit to this exact
-dataset?"** We don't claim it generalizes — we counted the three signals
-(expert-tier proficiency, pre-founding employment dates, duration
-mismatches) directly against this released data first (38+33+7=78, against
-spec's stated ~80) instead of picking thresholds from intuition, and we
-explicitly stopped chasing the last 2 candidates rather than add a fourth
-rule tuned to this exact count — see `exp_log.md` §1.
+dataset?"** Here's the honest answer, including where we were wrong: we
+originally counted the three signals against an 18,745-row copy of
+`candidates.jsonl` that turned out to be a truncated dev-time download, not
+the real release (38+33+7=78, which we thought matched spec's stated ~80).
+Re-run against the actual 100,000-row file, the same three rules find 200 +
+175 + 35 = 410 candidates (0.41% of the population — proportionally close
+to the original 78/18,745 rate, but 5x the spec's ~80 in absolute terms).
+More concerning: at full scale, zero candidates trip more than one signal,
+where the spec's own worked example describes a honeypot with *multiple*
+simultaneous red flags. Our founding-year-violation rule in particular has
+a median severity of just 1 year early, milder than the spec's 3-year
+example. Our honest read: this rule is partly firing on generator noise in
+the wider release, not exclusively on designed honeypots, and we didn't
+retune the threshold after learning the "expected" answer — that would be
+fitting to a number we were told, not to evidence. What doesn't change:
+our actual top 100 has 0 flagged honeypots regardless, so the thing the
+grader actually checks (honeypot rate in the top 100) still passes.
 
 **"What didn't work?"** Three things, kept visible in `exp_log.md` rather
 than removed: keyword-overlap-only scoring (the original anti-keyword trap
@@ -170,5 +195,11 @@ report LightGBM numbers we never actually generated.
   honest implementation of the brief's literal formula).
 - Real sentence-transformer embeddings for stage 2, blocked by the
   CPU-only/no-network constraint in this environment.
-- Deploy the sandbox link and push the GitHub repo — both outside what this
-  build can do on its own.
+- Tighten the founding-year-violation honeypot signal (see §4's honeypot
+  question) — likely require severity >=2 years and/or co-occurrence with
+  another signal before counting a candidate, instead of any single
+  1-year-early date. Not done yet because we don't have ground truth to
+  validate a new threshold against; the current signal's effect on the
+  actual top 100 is zero either way, so this is a diagnostic-accuracy fix,
+  not a submission-correctness one.
+- Deploy the sandbox link — outside what this build can do on its own.

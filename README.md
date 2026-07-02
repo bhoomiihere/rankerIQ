@@ -1,6 +1,6 @@
 # Redrob Candidate Ranking — Team Bk
 
-Ranks 18,745 candidates against Redrob's Senior AI Engineer (Founding Team)
+Ranks 100,000 candidates against Redrob's Senior AI Engineer (Founding Team)
 JD and outputs `submission.csv` per `docs/submission_metadata_template.yaml`'s
 spec. Built for the Intelligent Candidate Discovery & Ranking Challenge.
 
@@ -14,7 +14,7 @@ python rank.py --candidates candidates.jsonl --out submission.csv
 python validate_submission.py submission.csv
 ```
 
-Runs in ~15-20 seconds on 2 CPU cores / 4GB RAM, no network, no GPU. See
+Runs in ~55-60 seconds on 2 CPU cores / 4GB RAM, no network, no GPU. See
 `metrics_report.md` for the actual run we used to write this README.
 
 ## What's in this repo
@@ -42,11 +42,16 @@ submission_metadata.yaml           filled-in submission metadata (TODOs marked)
 ## Why this architecture
 
 **Why a 4-stage funnel instead of scoring everyone with the full feature
-pipeline directly.** At 18,745 candidates we could feature-score everyone
-inside the time budget — we checked, it's under 2 seconds. We built the
-funnel anyway because the JD explicitly frames this as a 100K+ candidate
-problem, and an architecture that only works at the size of this particular
-dataset isn't really solving the stated problem. BM25 (stage 1) is cheap and
+pipeline directly.** We built the funnel because the JD explicitly frames
+this as a 100K+ candidate problem — which we later confirmed is exactly the
+real scale (the actual `candidates.jsonl` release is 100,000 rows; our
+early dev builds ran against a truncated 18,745-row copy, see
+`experiments/exp_log.md`). We never benchmarked "skip the funnel, feature-
+score all 100,000 directly" against the real file, because the funnel
+approach already comes in well under budget (56.7s end to end, see
+`metrics_report.md`) and an architecture that only works at the size of one
+particular dataset isn't really solving the stated problem anyway. BM25
+(stage 1) is cheap and
 catches "does this profile use JD-relevant vocabulary at all" before we pay
 for anything heavier; TF-IDF/SVD (stage 2) catches semantic matches BM25's
 exact-token matching misses; the full feature pipeline (stage 3, honeypot
@@ -92,9 +97,10 @@ prove.
 **Why honeypot detection is a separate, multiplicative penalty instead of
 a feature folded into the weighted sum.** We measured this directly: the
 single highest-scoring candidate by raw semantic similarity to the JD
-(`CAND_0005538`, 0.897 cosine) independently trips our honeypot detector
-("expert"-tier skill proficiency, a level no other candidate in the dataset
-uses). If honeypot signals were just one more additively-weighted feature,
+(`CAND_0077337`, 0.921 cosine, among the 300 stage-2 survivors)
+independently trips our honeypot detector ("expert"-tier skill proficiency
+in 11 skills, a level only 200 of 100,000 candidates use at all). If
+honeypot signals were just one more additively-weighted feature,
 a honeypot with strong text elsewhere could still out-rank a middling real
 candidate. Treating it as a multiplier on the whole composite score (not
 just one sub-score) reflects what it actually means: "wrong type of
@@ -102,11 +108,12 @@ candidate," not "slightly weaker candidate."
 
 ## Assumptions
 
-- The released `candidates.jsonl` (18,745 usable records) is representative
-  of the kind of pool this pipeline would run against, even though the JD
-  references a 100K+ pool. We did not invent synthetic candidates to pad
-  this number; the funnel architecture is sized for the larger number, the
-  test run is on the number we actually have.
+- The final submission (`submission.csv`, committed) runs against the real,
+  full `candidates.jsonl` release (100,000 rows, 0 malformed). Early dev
+  builds (through 2026-06-22, see `experiments/exp_log.md`) worked against
+  a truncated 18,745-row copy before we had the real file; every number in
+  `metrics_report.md`, `challenge_analysis.md`, and `defense_notes.md` was
+  re-measured against the real 100,000-row file as of 2026-07-02.
 - `weighted_job_representation.json`'s skill-tier and title-tier judgments
   are our own reading of the JD, verified against frequency counts in the
   data (see `challenge_analysis.md`) but not against any external ground
