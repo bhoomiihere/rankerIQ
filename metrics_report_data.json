@@ -1,9 +1,7 @@
 {
   "backend": "sklearn-gbr",
-  "n_candidates_total": 18745,
-  "n_skipped_malformed": [
-    18746
-  ],
+  "n_candidates_total": 100000,
+  "n_skipped_malformed": [],
   "stage1_kept": 1000,
   "stage2_kept": 300,
   "top_k": 100,
@@ -11,34 +9,34 @@
     {
       "fold": 0,
       "backend": "sklearn-gbr",
-      "ndcg@10": 0.9956017531366267,
-      "ndcg@50": 0.9978649972565732,
+      "ndcg@10": 1.0,
+      "ndcg@50": 1.0,
       "map": 1.0,
       "p@10": 1.0
     },
     {
       "fold": 1,
       "backend": "sklearn-gbr",
-      "ndcg@10": 1.0,
-      "ndcg@50": 1.0,
+      "ndcg@10": 0.9865204262555528,
+      "ndcg@50": 0.9903432507405981,
       "map": 1.0,
-      "p@10": 0.5
+      "p@10": 0.7
     },
     {
       "fold": 2,
       "backend": "sklearn-gbr",
       "ndcg@10": 1.0,
-      "ndcg@50": 1.0,
+      "ndcg@50": 0.9996470488686964,
       "map": 1.0,
-      "p@10": 1.0
+      "p@10": 0.7
     },
     {
       "fold": 3,
       "backend": "sklearn-gbr",
-      "ndcg@10": 0.9672380520056517,
-      "ndcg@50": 0.9930854748516857,
-      "map": 0.8813455988455987,
-      "p@10": 0.9
+      "ndcg@10": 1.0,
+      "ndcg@50": 1.0,
+      "map": 1.0,
+      "p@10": 1.0
     },
     {
       "fold": 4,
@@ -46,17 +44,17 @@
       "ndcg@10": 1.0,
       "ndcg@50": 1.0,
       "map": 1.0,
-      "p@10": 0.8
+      "p@10": 0.9
     }
   ],
-  "honeypot_count_in_stage2": 36,
+  "honeypot_count_in_stage2": 179,
   "honeypot_count_in_top_k": 0,
   "tier_distribution_stage2": {
-    "0": 36,
+    "0": 179,
     "1": 5,
-    "2": 215,
+    "2": 72,
     "3": 34,
     "4": 10
   },
-  "wall_clock_seconds": 18.6
+  "wall_clock_seconds": 56.7
 }
