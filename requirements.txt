@@ -10,7 +10,12 @@ rank-bm25==0.2.2
 # Stage 3/4 feature scoring + learned reranker
 scikit-learn==1.7.2
 
-# Primary reranker backend (LambdaMART). If pip can't reach this on a given
-# sandbox, src/train_ranker.py falls back to sklearn's GradientBoostingRegressor
-# automatically -- see that file's module docstring for why. We're pinning a
-# version known to work with the lamb
+# lightgbm is deliberately NOT listed here. src/train_ranker.py tries it first
+# and falls back to sklearn's GradientBoostingRegressor when it's absent or
+# fails at fit time (see experiments/exp_log.md #9 for the numpy>=2.0 crash we
+# reproduced). The committed submission.csv was produced by the sklearn
+# backend; pinning lightgbm would risk the grading sandbox resolving a version
+# that fits successfully and produces a *different* top 100 than the one we
+# submitted -- a reproduction mismatch at Stage 3. Deterministic beats
+# marginally fancier. (This file previously ended mid-comment -- a truncation
+# we found during the Docker clean-room test and fixed here.)

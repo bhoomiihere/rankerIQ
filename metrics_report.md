@@ -60,16 +60,24 @@ across folds (0.86) is the more stable number to quote.
 
 ## Final run
 
+The committed `submission.csv` comes from the Docker clean-room run
+(python:3.11-slim container, `--network none --cpus 2 --memory 4g`), since
+the grading sandbox is containerized Linux and cross-platform float noise
+makes macOS-native output differ trivially (same top-100 membership, no
+rank moves beyond 2 positions — see `experiments/exp_log.md` §11).
+
 - 100,000 candidates loaded, 0 skipped.
-- Stage 1 (BM25) → 1000 survivors, 30.8s.
-- Stage 2 (TF-IDF/SVD dense) → 300 survivors, fit 22.4s + filter 0.2s.
+- Stage 1 (BM25) → 1000 survivors.
+- Stage 2 (TF-IDF/SVD dense) → 300 survivors.
 - Stage 3 (feature scoring + honeypot detection) → 300 scored, <0.1s.
-- Stage 4 (cross-validate + train + ensemble) → 0.4s.
-- Total wall clock: 56.7s. Budget was 5 minutes — most of the slack is
-  headroom for a slower machine than our dev sandbox, not waste. (At the
-  18,745-row scale we tested first, this was 18.2s; the jump to 56.7s at
-  full 100K scale is mostly BM25 and the TF-IDF/SVD fit, both of which
-  scale with corpus size — still 5x under budget.)
+- Stage 4 (cross-validate + train + ensemble) → 0.5s.
+- Total wall clock: 85.3s in the container (56.7s native macOS; the
+  difference is emulation/IO overhead, split across stages 1-2 which
+  dominate either way). Budget was 5 minutes — still ~3.5x under budget in
+  the slower environment, and two consecutive container runs are
+  byte-identical. (At the 18,745-row scale we tested first, this was
+  18.2s natively; the growth is BM25 and the TF-IDF/SVD fit, both of which
+  scale with corpus size.)
 - Honeypots in stage-2 pool: 179 / 300. Honeypots in final top 100: **0**.
 - Pseudo-tier distribution in stage-2 pool: tier 0 (honeypot/junk) 179,
   tier 1 (weak) 5, tier 2 (moderate) 72, tier 3 (strong) 34, tier 4

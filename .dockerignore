@@ -1,0 +1,8 @@
+# The 487MB dataset is mounted at `docker run` time (-v), never baked into
+# the image -- keeps the build context small and the image data-free.
+candidates.jsonl
+.git
+__pycache__
+.pytest_cache
+*.pyc
+.DS_Store

@@ -6,24 +6,24 @@ team_name: "Bk"
 primary_contact:
   name: "Meghna Kaushik"
   email: "mkgapbvk@gmail.com"
-  phone: "+91-XXXXXXXXXX"  # TODO: fill in before submitting
+  phone: "+91-9413468213"
 
 team_members:
   - name: "Bhoomi Kaushik"
-    email: "mkgapbvk@gmail.com"  # TODO: confirm/replace with Bhoomi's own email if different
+    email: "kaushikbhoomi05@gmail.com"
     role: "ML Engineer"
 
 github_repo: "https://github.com/bhoomiihere/rankerIQ"
-sandbox_link: "https://huggingface.co/spaces/YOUR_USERNAME/redrob-ranker"  # TODO: see README "Deploying the sandbox"
+sandbox_link: "https://rankeriq-92adnaqs9puv6t7rjpvjbr.streamlit.app/"
 
 reproduce_command: "python rank.py --candidates candidates.jsonl --out submission.csv"
 
 compute:
-  platform: "macOS 26.5.1 (arm64), local machine -- ran the 2026-07-02 re-run that produced the committed submission.csv"  # TODO: confirm/replace if the final upload run happens on a different machine
+  platform: "Docker python:3.11-slim container (--network none --cpus 2 --memory 4g), macOS arm64 host -- produced the committed submission.csv on 2026-07-02"
   cpu_cores: 2
   ram_gb: 4
   python_version: "3.11.15"
-  os: "macOS 26.5.1 (Darwin, arm64)"
+  os: "Debian (python:3.11-slim), linux/arm64"
   uses_gpu_for_inference: false
   has_network_during_ranking: false
   pre_computation_required: false

@@ -62,17 +62,23 @@ and the live run is clean.
 that it matches Redrob's real labels (this caveat is the first thing
 `metrics_report.md` says, on purpose).
 
-**Stage 3 — Code reproduction + honeypot check.** Pass, self-verified
-against the real 100,000-row `candidates.jsonl`. 56.7s / 2 cores / well
-under 16GB, zero network calls (verified with network disabled), 0
-honeypots in the final top 100 against a >10%-disqualifies threshold (179
-honeypots were in the stage-2 pool of 300 — all filtered; see the
-"Honeypots" section of `challenge_analysis.md` for why this count is much
-higher than the spec's approximate ~80 figure and what we think is causing
-that, reported honestly rather than tuned away). `Dockerfile` exists and
-should be tested with `docker build && docker run` on a clean machine
-before the real submission, which we have not done in this sandbox (no
-Docker daemon available here — flagged honestly, not silently skipped).
+**Stage 3 — Code reproduction + honeypot check.** Pass, verified in an
+actual Docker clean-room on 2026-07-02: `docker build` from the committed
+`Dockerfile`, then `docker run --network none --cpus 2 --memory 4g` against
+the real 100,000-row `candidates.jsonl`. 85.3s wall clock (56.7s running
+natively; the container is the number that matters since the grading
+sandbox is containerized), zero network access (enforced by `--network
+none`, not just asserted), 0 honeypots in the final top 100 against a
+>10%-disqualifies threshold (179 honeypots were in the stage-2 pool of 300
+— all filtered; see the "Honeypots" section of `challenge_analysis.md` for
+why this count is much higher than the spec's approximate ~80 figure and
+what we think is causing that, reported honestly rather than tuned away).
+Two consecutive container runs produce byte-identical output. The committed
+`submission.csv` is the Linux-container output specifically — macOS-native
+and Linux runs differ by float noise (same 100 candidates, no rank moves
+beyond 2 positions, max score delta 0.0014), and the grader reproduces on
+Linux, so that's the platform our committed file should match. Full detail
+in `experiments/exp_log.md` §11.
 
 **Stage 4 — Manual review.** Self-judged directly against the spec's own
 six reasoning-quality checks (Table 2), see Section 3 below — this is
@@ -179,10 +185,15 @@ SVD basis on stage-1 survivors only (made scores non-reproducible across
 `--stage1-k` settings).
 
 **"Why sklearn instead of LightGBM if you designed for LightGBM?"**
-`requirements.txt` pins `lightgbm`; it wasn't importable in this dev
-sandbox (no network to resolve the build), so `train_ranker.py` falls back
-to `sklearn.GradientBoostingRegressor` with the same train/score interface,
-logged with a warning every time it fires. Every number in
+`train_ranker.py` tries lightgbm first and falls back to
+`sklearn.GradientBoostingRegressor` with the same train/score interface,
+logged with a warning every time it fires. `requirements.txt` deliberately
+does NOT pin lightgbm (we discovered during the Docker clean-room test that
+the file had been truncated mid-comment and the pin was never actually
+there — and on reflection, leaving it out is the right call): the committed
+`submission.csv` came from the sklearn backend, and installing lightgbm in
+the grading sandbox could produce a *different* top 100 than the file we
+submitted — a Stage-3 reproduction mismatch. Every number in
 `metrics_report.md` is honestly labeled `backend: sklearn-gbr` — we did not
 report LightGBM numbers we never actually generated.
 

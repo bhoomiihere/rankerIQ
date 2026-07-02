@@ -279,3 +279,35 @@ rather than to evidence in the data. What we verified instead: our actual
 top 100 has 0 flagged honeypots either way, so this is a diagnostic-accuracy
 gap in our own reporting, not a submission-correctness problem. Listed as an
 open item in `defense_notes.md` §5.
+
+## 11. Docker clean-room test: two real findings (2026-07-02)
+
+First actual `docker build && docker run` of the committed Dockerfile
+(defense_notes.md had flagged this as not-yet-done). Ran with the grading
+constraints enforced for real, not simulated: `--network none --cpus 2
+--memory 4g`, dataset mounted read-only. Build clean, run clean, 85.3s
+wall clock (vs 56.7s native macOS), `validate_submission.py` passes, two
+consecutive container runs byte-identical. Also added a `.dockerignore` so
+the 487MB dataset is mounted rather than baked into the image.
+
+Two things surfaced that were worth more than a checkbox:
+
+**requirements.txt was truncated mid-comment, and the lightgbm pin it
+claimed to have never existed.** The file literally ended with "a version
+known to work with the lamb". Rather than adding the pin, we made its
+absence deliberate and documented why in the file itself: the committed
+submission.csv comes from the sklearn-GBR backend, and a grading sandbox
+that successfully installs and fits lightgbm would produce a *different*
+top 100 than the file we submitted -- a Stage-3 reproduction mismatch.
+Deterministic beats marginally fancier. defense_notes.md's claim that
+"requirements.txt pins lightgbm" was corrected too.
+
+**macOS-native and Linux-container outputs differ by float noise.** Same
+100 candidates in both top-100s, 29 rank swaps all within 2 positions, max
+score delta 0.0014 -- consistent with BLAS/libm differences across
+platforms flowing through the SVD and GBR, not a logic difference. Since
+the grader reproduces in a containerized Linux environment, we replaced
+the committed submission.csv with the container-produced one (and its
+matching metrics_report_data.json) so the file we submit is the file their
+environment is most likely to regenerate. Verified determinism within the
+container (two runs byte-identical) before trusting it as canonical.
