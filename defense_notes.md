@@ -31,12 +31,12 @@ stated plainly rather than assumed.
   rendered and visually checked slide-by-slide. Not yet re-checked against
   the corrected 100K-scale numbers — see blockers below.
 
-**Blocking — needs Meghna, can't be filled by the pipeline:**
+**Blocking — needs the team lead, can't be filled by the pipeline:**
 
 - `submission_metadata.yaml`: real phone number (`primary_contact.phone`),
-  confirmation of Bhoomi's actual email if it differs from
-  `mkgapbvk@gmail.com`, the real `compute.platform` line for whichever
-  machine actually produces the final submission run.
+  team-lead contact email, the real `compute.platform` line for whichever
+  machine actually produces the final submission run. (All filled as of
+  2026-07-02: Bhoomi Kaushik, kaushikbhoomi05@gmail.com.)
 - `github_repo` — now known and pushed: `https://github.com/bhoomiihere/rankerIQ`.
   Still needs to be confirmed in `submission_metadata.yaml` + PPT slide 9
   once the latest commits (bugfix + real-data re-run + doc corrections) are

@@ -4,7 +4,7 @@ Ranks 100,000 candidates against Redrob's Senior AI Engineer (Founding Team)
 JD and outputs `submission.csv` per `docs/submission_metadata_template.yaml`'s
 spec. Built for the Intelligent Candidate Discovery & Ranking Challenge.
 
-Team: Bk (Meghna Kaushik, Bhoomi Kaushik)
+Team: Bk (Bhoomi Kaushik)
 
 ## Quick start
 

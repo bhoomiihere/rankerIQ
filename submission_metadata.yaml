@@ -4,14 +4,14 @@
 team_name: "Bk"
 
 primary_contact:
-  name: "Meghna Kaushik"
-  email: "mkgapbvk@gmail.com"
+  name: "Bhoomi Kaushik"
+  email: "kaushikbhoomi05@gmail.com"
   phone: "+91-9413468213"
 
 team_members:
   - name: "Bhoomi Kaushik"
     email: "kaushikbhoomi05@gmail.com"
-    role: "ML Engineer"
+    role: "Team Lead / ML Engineer"
 
 github_repo: "https://github.com/bhoomiihere/rankerIQ"
 sandbox_link: "https://rankeriq-92adnaqs9puv6t7rjpvjbr.streamlit.app/"
